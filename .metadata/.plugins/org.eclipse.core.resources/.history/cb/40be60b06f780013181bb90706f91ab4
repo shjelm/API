@@ -1,0 +1,111 @@
+package com.example.showit;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import android.content.Context;
+import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+ 
+
+	public class ShowMessages extends Fragment{
+		
+
+    public static ShowMessages newInstance(Context context) {
+    	ShowMessages f = new ShowMessages();
+ 
+        return f;
+    }
+    private ListView mainListView;  
+    private ArrayAdapter<String> listAdapter; 
+	private String text = "";
+	private ViewGroup root;
+	private ArrayList<String> messagesList;
+    
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState) {
+         root = (ViewGroup) inflater.inflate(R.layout.activity_show_messages, null); 
+          
+        // Find the ListView resource.   
+        mainListView = (ListView) root.findViewById( R.id.mainListView ); 
+
+		String[] messages = new String[] {text};    
+		messagesList = new ArrayList<String>();  
+		messagesList.addAll( Arrays.asList(messages) );  
+
+		listAdapter = new ArrayAdapter<String>(root.getContext(), R.layout.simplerow, messagesList); 
+		
+		mainListView.setAdapter(listAdapter);
+
+		listAdapter.notifyDataSetChanged();
+        return root;
+    }
+    
+    @Override
+    	public void onStart() {
+    		// TODO Auto-generated method stub
+    		super.onStart();
+
+    		new Thread(new Client()).start();
+    	}
+    
+    public void onClick(View v)
+    {
+    	
+    }
+    
+    private class Client implements Runnable{
+	    public void run(){
+	    	byte[] buf = null;
+	    	int maxId = 0;
+	    	try{
+	    		InetAddress serverAddr = InetAddress.getByName("194.47.172.157");
+	    		
+	    		DatagramSocket socket = new DatagramSocket();
+	    			
+    			byte[] x = ("MAXID;").getBytes();
+    			DatagramPacket maxIdPacket = new DatagramPacket(x, x.length, serverAddr, 9050);
+
+	    		socket.send(maxIdPacket);
+	    		
+	    		String maxString = new String (maxIdPacket.getData());
+	    		
+	    		socket.recive(maxIdPacket);
+	    		
+	    		for(int i = maxId - 10; i < maxId ; i--){
+	    			
+	    		buf = ("GETID "+i+";").getBytes();
+	    		
+	    		DatagramPacket packet = new DatagramPacket(buf, buf.length, serverAddr, 9050);
+	    		
+	    		socket.send(packet);
+	    		
+	    		byte[] message = new byte[1500];
+	    		packet = new DatagramPacket(message, message.length);
+	    		
+	    		socket.receive(packet);
+	    		
+	    		text = new String(packet.getData());
+	    		
+	    		mainListView.post(new Runnable(){
+	    			public void run(){ 
+	    				messagesList.add(text); 
+	    				listAdapter.notifyDataSetChanged();
+	    			}
+	    		});
+	    		}
+	    		
+	    		socket.close();
+	    	}
+	    		catch (Exception e){}
+	    		
+	    	}
+	    }
+    }
